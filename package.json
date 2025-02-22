@@ -6,5 +6,9 @@
   "author": "Nick Aversano",
   "license": "UNLICENSE",
   "private": false,
-  "files": ["lightning.js"]
+  "files": ["lightning.js"],
+  "scripts": {
+    "start": "cd examples/hello && ./build.sh",
+    "build": "npx uglify-js lightning.js -o lightning.min.js"
+  }
 }
