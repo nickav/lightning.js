@@ -217,7 +217,7 @@
             const initialState = getState();
             window.history.pushState(initialState, initialState.title, '');
 
-            debug("⚡Lightning Links⚡- v" + Lightning.VERSION);
+            debug("⚡️ Lightning Links ⚡️ - v" + Lightning.VERSION);
             debug("init", { initialState, element: getElement(document) });
 
             if (options.cache)

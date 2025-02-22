@@ -1,6 +1,8 @@
-# ⚡ Lightning Links ⚡
+# ⚡️ Lightning-Links.js ⚡️
 
 _Supercharge your static websites!_
+
+Automatically prefetches and caches pages.
 
 ## Features
 - ✅ Works with existing static websites
@@ -10,6 +12,8 @@ _Supercharge your static websites!_
 - ✅ 2.5KB of JavaScript (minified)
 
 ## Install
+
+The library is available both minified ([`lightning.min.js`](./lightning.min.js)) and unminified ([`lightning.js`](./lightning.js)).
 
 ### Manually
 
