@@ -9,7 +9,9 @@ _Supercharge your static websites!_
 - ✅ Public-domain license
 - ✅ 2.5KB of JavaScript (minified)
 
-## Usage
+## Install
+
+### Manually
 
 1. Download and place the [`lightning.js`](./lightning.js) file in your public files.
 2. Include the [`lightning.js`](./lightning.js) file in your all your HTML pages:
@@ -18,7 +20,13 @@ _Supercharge your static websites!_
 <script src="./lightning.js?v=1.0.0&run=1"></script>
 ```
 
-3. That's it!
+### With unpkg
+
+1. Place this in all your HTML pages:
+
+```html
+<script src="https://unpkg.com/lightning-links.js@1.0.0/lightning.min.js?run=1"></script>
+```
 
 ### Usage With Options
 
