@@ -1,0 +1,10 @@
+{
+  "name": "lightning-links.js",
+  "version": "1.0.0",
+  "description": "⚡Lightning Links⚡- Supercharge your static websites!",
+  "main": "lightning.js",
+  "author": "Nick Aversano",
+  "license": "UNLICENSE",
+  "private": false,
+  "files": ["lightning.js"]
+}
