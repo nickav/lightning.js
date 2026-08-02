@@ -30,7 +30,6 @@
         };
 
         Lightning.instance = instance;
-        Lightning.VERSION = '1.0.2';
 
         const debug = (...args) => {
             if (options.debug || instance.debug) console.log(...args);
@@ -326,7 +325,13 @@
         } else {
             window.addEventListener('load', init);
         }
+
+        return this;
     };
+
+    // Set before the instance is created:
+    Lightning.VERSION = '1.0.2';
+
     Lightning.update = () => {};
 
     Lightning._listeners = [];

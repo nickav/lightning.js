@@ -21,7 +21,7 @@ The library is available minified ([`lightning.min.js`](./lightning.min.js)) and
 2. Include the [`lightning.js`](./lightning.js) file in your all your HTML pages:
 
 ```html
-<script src="./lightning.js?v=1.0.0&run=1"></script>
+<script src="./lightning.js?v=1.0.2"></script>
 ```
 
 ### With unpkg
@@ -29,7 +29,8 @@ The library is available minified ([`lightning.min.js`](./lightning.min.js)) and
 1. Place this in all your HTML pages:
 
 ```html
-<script src="https://unpkg.com/lightning-links.js@1.0.0/lightning.min.js?run=1"></script>
+<script src="https://unpkg.com/lightning-links.js@1.0.2/lightning.min.js"></script>
+<script>Lightning();</script>
 ```
 
 ### Usage With Options
@@ -37,15 +38,8 @@ The library is available minified ([`lightning.min.js`](./lightning.min.js)) and
 You can explicitly invoke the library like this:
 
 ```html
-<script src="./lightning.js?v=1.0.0"></script>
+<script src="./lightning.js?v=1.0.2"></script>
 <script>Lightning({ cacheTimeout: 60*60 });</script>
-```
-
-Or you can set options ahead of time on `window.LIGHTNING_OPTIONS`:
-
-```html
-<script>window.LIGHTNING_OPTIONS = { cacheTimeout: 60*60 };</script>
-<script src="./lightning.js?v=1.0.0"></script>
 ```
 
 See the full list of [options](#options).
@@ -56,6 +50,8 @@ See the full list of [options](#options).
 const options = {
     /** The query selector to find links on the page. */
     linkSelector: 'a:not([data-lightning="false"])',
+    /** When restoring a page, will re-execute scripts that match this selector. */
+    reloadScriptSelector: 'script[x-lightning]',
     /**
      * The query selector to find the content to replace.
      * By default, the whole body is replaced when switching pages.
@@ -76,6 +72,8 @@ const options = {
     restoreClassName: true,
     /** When true, prints debug information to the console. */
     debug: false,
+    /** Callback that fires when the page changes. */
+    onChange: null,
 };
 ```
 
