@@ -13,7 +13,7 @@ Automatically prefetches and caches pages.
 
 ## Install
 
-The library is available both minified ([`lightning.min.js`](./lightning.min.js)) and unminified ([`lightning.js`](./lightning.js)).
+The library is available minified ([`lightning.min.js`](./lightning.min.js)) and unminified ([`lightning.js`](./lightning.js)).
 
 ### Manually
 

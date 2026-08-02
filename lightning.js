@@ -7,6 +7,7 @@
 
     const defaultConfig = {
         linkSelector: 'a:not([data-lightning="false"])',
+        reloadScriptSelector: 'script[x-lightning]',
         contentSelector: 'body',
         prefetch: true,
         prefetchDelay: 20,
@@ -15,6 +16,7 @@
         scrollToTop: true,
         restoreClassName: true,
         debug: false,
+        onChange: null,
     };
 
     function Lightning(config) {
@@ -24,10 +26,11 @@
             generation: 0,
             pageCache: {},
             debug: false,
+            renderedPage: null,
         };
 
         Lightning.instance = instance;
-        Lightning.VERSION = '1.0.0';
+        Lightning.VERSION = '1.0.2';
 
         const debug = (...args) => {
             if (options.debug || instance.debug) console.log(...args);
@@ -37,32 +40,44 @@
             return root.querySelector(options.contentSelector);
         }
 
-        const getState = () => {
-            const el = getElement(document);
+        const getState = (el) => {
             const result = {
                 html: el ? el.innerHTML : null,
                 title: document.title,
                 bodyClassName: document.body.className,
                 className: el ? el.className : null,
             };
+            // debug("getState", result);
+
             return result;
         };
 
-        const setState = (state) => {
+        const setState = (el, state) => {
+            // debug("setState", state);
+
             document.title = state.title;
             if (options.restoreClassName) {
                 document.body.className = state.bodyClassName;
             }
 
-            const el = getElement(document);
             if (el) {
                 el.innerHTML = state.html;
                 if (options.restoreClassName) {
                     el.className = state.className;
                 }
-            }
 
-            LightningLinks();
+                // NOTE(nick): force execute newly added scripts
+                if (options.reloadScriptSelector)
+                {
+                    el.querySelectorAll(options.reloadScriptSelector).forEach((old) => {
+                        const s = document.createElement('script');
+                        Array.from(old.attributes).forEach(a => s.setAttribute(a.name, a.value));
+                        s.textContent = old.textContent;
+                        old.remove();
+                        document.body.appendChild(s);
+                    });
+                }
+            }
         };
 
         const getPage = (path) => {
@@ -110,82 +125,120 @@
             });
         }
 
-        function LightningLinks() {
-            Array.from(document.querySelectorAll(options.linkSelector)).forEach((link) => {
+        const render = (path) => {
+            if (instance.renderedPage === path) return Promise.resolve({ ok: false });
+            instance.renderedPage = path;
+
+            debug("[render]", { path });
+
+            const generation = ++instance.generation;
+
+            return getPageCached(path).then((text) => {
+                if (instance.generation !== generation) return { ok: false };
+
+                let html = null;
+                try {
+                    const dom = new DOMParser();
+                    html = dom.parseFromString(text, 'text/html');         
+                } catch (err) {
+                    console.error("DOMParser error:", err);
+                }
+
+                if (html)
+                {
+                    const el = getElement(html);
+                    if (el)
+                    {
+                        const title = html.title;
+                        const state = { ...getState(el), title };
+
+                        setState(getElement(document), state);
+                        LightningLinks();
+
+                        if (options.scrollToTop)
+                        {
+                            window.scrollTo(0, 0);
+                        }
+
+                        return { ok: true, state, title, path };
+                    }
+                    else
+                    {
+                        debug("Missing element from response!", path);
+                        return { ok: false };
+                    }
+                }
+                else
+                {
+                    debug("Failed to parse html from string:", text);
+                    return { ok: false };
+                }
+            }).catch((err) => {
+                console.error(err);
+                throw err;
+            });
+        };
+        Lightning.render = render;
+
+        const navigate = (path, options = { redirect: false }) => {
+            const href = window.location.origin + path;
+            debug("⚡");
+
+            if (window.location.href === href) return Promise.resolve({ ok: false });
+
+            return render(path).then((result) => {
+                if (result.ok) {
+                    const { state, title, path } = result;
+
+                    if (options.redirect) {
+                        debug("replace state", state);
+    -                   window.history.replaceState(state, title, path);
+                    } else {
+                        debug("push state", state);
+    -                   window.history.pushState(state, title, path);
+                    }
+                }
+            }).catch((err) => {
+                window.location.href = href;
+            });
+        };
+        Lightning.navigate = navigate;
+
+        const apply = (selector) => {
+            Array.from(document.querySelectorAll(selector)).forEach((link) => {
                 const origin = window.location.origin;
                 const isExternal = !link.href.startsWith(origin);
+                const isHash = link.href.includes('#');
 
                 if (isExternal) return;
                 if (link.target == "_blank") return;
+                if (isHash) return;
 
                 if (link.lightning) return;
                 link.lightning = true;
 
-                const path = link.href.slice(origin.length);
-
                 link.addEventListener('click', (e) => {
+                    const path = link.href.slice(origin.length);
+                    const disabled = link.getAttribute('x-no-lightning');
+                    
+                    if (disabled || Lightning.disabled) return;
+
+                    // NOTE(nick): allow ctrl+click to work as expected
+                    if (e.ctrlKey || e.metaKey) return;
+
                     e.preventDefault();
                     e.stopPropagation();
 
-                    debug("⚡");
-
-                    const generation = ++instance.generation;
-
-                    getPageCached(path).then((text) => {
-                        if (instance.generation !== generation) return;
-
-                        let html = null;
-                        try {
-                            const dom = new DOMParser();
-                            html = dom.parseFromString(text, 'text/html');         
-                        } catch (err) {
-                            console.error(err);
-                            window.location.href = link.href;
-                            return;
-                        }
-
-                        if (html)
-                        {
-                            const el = getElement(html);
-                            if (el)
-                            {
-                                const body = html.body;
-                                const title = html.title;
-
-                                setState({
-                                    title: html.title,
-                                    html: el.innerHTML,
-                                    className: el.className,
-                                    bodyClassName: body.className,
-                                });
-
-                                if (options.scrollToTop)
-                                {
-                                    window.scrollTo(0, 0);
-                                }
-
-                                const state = getState();
-                                debug("push state", state);
-                                window.history.pushState(state, title, path);
-                            }
-                            else
-                            {
-                                debug("Missing element from response!", path);
-                            }
-                        }
-                        else
-                        {
-                            debug("Failed to parse html from string:", text);
-                        }
-                    }).catch((err) => {
-                        console.error(err);
-                        window.location.href = link.href;
-                    });
-
+                    navigate(path);
                     return false;
                 });
 
                 link.addEventListener('mouseenter', (e) => {
+                    const path = link.href.slice(origin.length);
+                    const disabled = link.getAttribute('x-no-lightning');
+
+                    if (disabled || Lightning.disabled) return;
+
                     if (options.prefetch) {
                         link.lightningPrefetch = setTimeout(() => {
                             link.lightningPrefetch = null;
@@ -197,24 +250,59 @@
                 });
 
                 link.addEventListener('mouseleave', (e) => {
+                    if (Lightning.disabled) return;
+
+                    const disabled = link.getAttribute('x-no-lightning');
+                    if (disabled) return;
+                    
                     if (link.lightningPrefetch) {
                         clearTimeout(link.lightningPrefetch);
                         link.lightningPrefetch = null;
                     }
                 });
             });
+        };
+        Lightning.apply = apply;
+
+        const trigger = (event) => {
+            (Lightning._listeners || []).forEach((listener) => {
+                listener.fn(event);
+            });
+        };
+
+        function LightningLinks() {
+            apply(options.linkSelector);
+
+            // NOTE(nick): setTimeout so window.location.pathname reflects the new URL
+            setTimeout(() => {
+                if (typeof options.onChange === 'function') options.onChange();
+                trigger({ name: 'change' });
+            }, 0);
         }
 
+        Lightning.update = () => apply(options.linkSelector);
+
         window.addEventListener('popstate', (event) => {
-            const state = event.state;
-            if (state) {
-                debug("pop state", state);
-                setState(state);
+            let state = event.state;
+            if (!state) {
+                const path = window.location.pathname;
+                // @Correctness: check if entry has been invalidated...
+                if (instance.pageCache[path]) {
+                    state = instance.pageCache[path];
+                }
+            }
+
+            debug("pop state", state);
+            if (state && state.html) {
+                setState(getElement(document), state);
+                LightningLinks();
+            } else {
+                window.location.reload();
             }
         });
 
         const init = () => {
-            const initialState = getState();
+            const initialState = getState(getElement(document));
             window.history.pushState(initialState, initialState.title, '');
 
             debug("⚡️ Lightning Links ⚡️ - v" + Lightning.VERSION);
@@ -239,11 +327,21 @@
             window.addEventListener('load', init);
         }
     };
+    Lightning.update = () => {};
+
+    Lightning._listeners = [];
+    Lightning.listen = (listener) => {
+        const index = Lightning._listeners.findIndex((it) => it === listener);
+        if (index < 0) {
+            Lightning._listeners.push(listener);
+        }
+    };
+    Lightning.unlisten = (listener) => {
+        const index = Lightning._listeners.findIndex((it) => it === listener);
+        if (index >= 0) {
+            Lightning._listeners.splice(listener, 1);
+        }
+    };
 
     window.Lightning = Lightning;
-
-    if (document.currentScript && document.currentScript.src.indexOf("run=1") >= 0) {
-        const options = window["LIGHTNING_OPTIONS"] || {};
-        Lightning(options);
-    }
 })();
